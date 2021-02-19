@@ -13,6 +13,8 @@ try:
         depth = frames.get_depth_frame()
         if not depth: continue
         #might need break
+        dist = depth.get_distance(300,250)
+        print(dist)
 
     exit(0)
 
