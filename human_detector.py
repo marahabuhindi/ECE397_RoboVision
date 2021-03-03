@@ -9,9 +9,27 @@ output: array of detected humans, where each `human`
 is represented as [x, y, width, height].
 """
 def detect_humans(color_image):
-    humans = []
-    # TODO: Add human detection logic
-    return humans
+    # initialize the HOG descriptor/person detector
+    hog = cv2.HOGDescriptor()
+    hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
+
+    # using a greyscale picture, also for faster detection
+    gray = cv2.cvtColor(color_image, cv2.COLOR_RGB2GRAY)
+
+    # detect people in the image
+    # returns the bounding boxes for the detected objects
+    humans, weights = hog.detectMultiScale(gray, winStride=(8,8)) 
+
+    boxes = np.array([[x, y, x + w, y + h] for (x, y, w, h) in humans])
+
+    for (xA, yA, xB, yB) in boxes:
+        # display the detected boxes in the colour picture
+        cv2.rectangle(color_image, (xA, yA), (xB, yB),
+                        (0, 130, 0), 2)
+        # display a circle at the center of detected person
+        cv2.circle(color_image, ((xB+xA)//2, (yB+yA)//2), 5, (255,0,0),1)
+    
+    return humans, color_image
 
 """
 `calculate_distances`
@@ -50,6 +68,8 @@ def main():
             depth_image = np.asanyarray(depth_frame.get_data())
             color_image = np.asanyarray(color_frame.get_data())
 
+            # Deteect humans and draw rectangles around them
+            humans, color_image = detect_humans(color_image)
 
             # Apply colormap on depth image (image must be converted to 8-bit per pixel first)
             depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depth_image, alpha=0.03), cv2.COLORMAP_JET)
