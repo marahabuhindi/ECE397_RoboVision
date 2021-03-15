@@ -40,7 +40,7 @@ def calculate_distances(humans, depth_frame):
     distances = []
     leastDist = 99999
     closestCoord = []
-    to_point = []
+    to_point = []*3
     for human in humans:
         for i in human[2]:
             for j in human[3]: #human[0:1] is coordinate of top left corner of the indicator box.
@@ -48,7 +48,7 @@ def calculate_distances(humans, depth_frame):
                 y = human[1] - j
                 #to get dist need the x and y to map to a unit of measurement (pixel numbers now)
                 depth =  depth_frame.get_distance(x, y) #returns depth of pixel (x,y) in meters 
-                rs2_deproject_pixel_to_point(to_point,,[x,y],depth)
+                rs.rs2_deproject_pixel_to_point(to_point,[x,y],depth)
                 dist = distCalc.distance_calc(to_point[0],to_point[1],depth)
                 distances.append(dist)
 
@@ -106,6 +106,9 @@ def main():
                 images = np.hstack((color_image, depth_colormap))
 
             # Show images
+            dist, coord = calculate_distances(humans, depth_frame)
+            print("Human is " + str(dist) + " away\n")
+            
             cv2.namedWindow('RealSense', cv2.WINDOW_AUTOSIZE)
             cv2.imshow('RealSense', images)
             cv2.waitKey(1)
