@@ -1,7 +1,7 @@
 import pyrealsense2 as rs
 import numpy as np
 import cv2
-
+import distCalc
 """
 `detect_humans`
 input: color image from the camera.
@@ -38,12 +38,33 @@ output: array of calculated of distances.
 """
 def calculate_distances(humans, depth_frame):
     distances = []
+    leastDist = 99999
+    closestCoord = []
+    to_point = []
     for human in humans:
-        x = human[0]
-        y = human[1]
-        dist = depth_frame.get_distance(x, y)
-        distances.append(dist)
-    return distances
+        for i in human[2]:
+            for j in human[3]: #human[0:1] is coordinate of top left corner of the indicator box.
+                x = human[0] + i
+                y = human[1] - j
+                #to get dist need the x and y to map to a unit of measurement (pixel numbers now)
+                depth =  depth_frame.get_distance(x, y) #returns depth of pixel (x,y) in meters 
+                rs2_deproject_pixel_to_point(to_point,,[x,y],depth)
+                dist = distCalc.distance_calc(to_point[0],to_point[1],depth)
+                distances.append(dist)
+
+                #check if distance is too close, 0.6096 meters = 2'
+                if dist <  0.6096:
+                    print("DANGER") 
+                    return -99999, closestCoord
+                if dist < leastDist:
+                    leastDist = dist
+                    closestCoord.append(x,y,dist)
+
+        # x = human[0]
+        # y = human[1]
+        # dist = depth_frame.get_distance(x, y)
+        # distances.append(dist)
+    return leastDist, closestCoord #distances
 
 def main():
     # Configure depth and color streams
