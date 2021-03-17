@@ -3,6 +3,16 @@ import numpy as np
 import cv2
 import distCalc
 """
+`guassian_blur`
+input: color image from the camera.
+output: Image wiht a gaussian blur filter applied on it
+"""
+def gaussian_blur(color_image):
+    gray = cv2.cvtColor(color_image, cv2.COLOR_BGR2GRAY)
+    gray = cv2.GaussianBlur(gray, (21, 21), 0)
+    return gray
+
+"""
 `detect_humans`
 input: color image from the camera.
 output: array of detected humans, where each `human`
@@ -18,8 +28,46 @@ def detect_humans(color_image):
 
     # detect people in the image
     # returns the bounding boxes for the detected objects
-    humans, weights = hog.detectMultiScale(gray, winStride=(8,8)) 
+    humans, _ = hog.detectMultiScale(gray, winStride=(6,6), padding=(2,2), scale=1.05)  
 
+    return humans
+
+"""
+`detect_moving_object`
+input: first frame with gaussian filter applied 
+and the color image from the camera.
+output: array of detected objects, where each `object`
+is represented as [x, y, width, height].
+"""
+def detect_moving_objects(first_frame, color_image):
+    # Apply gaussian filter on color image from camera
+    guassian_image = gaussian_blur(color_image)
+
+    # Calculate the difference between initial frame and current frame
+    diff_image= cv2.absdiff(first_frame, guassian_image)
+
+    # Find the contours in the image based on a threshold
+    th_delta = cv2.threshold(diff_image, 60, 255, cv2.THRESH_BINARY)[1]
+    th_delta = cv2.dilate(th_delta, None, iterations=0)
+    (contours, _) = cv2.findContours(th_delta.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    # Fill the objects array with bounding rectangles of each contour
+    objects = []
+    for contour in contours:
+        if cv2.contourArea(contour) < 10000:
+            continue
+        objects.append(cv2.boundingRect(contour))
+
+    return objects
+
+"""
+`draw_rectangles`
+input: color image from the camera
+humans as an array of x,y,w,h
+objects as an array of x,y,w,h
+output: color image with bounding rectangles drawn
+"""
+def draw_rectangles(color_image, humans, objects):
     boxes = np.array([[x, y, x + w, y + h] for (x, y, w, h) in humans])
 
     for (xA, yA, xB, yB) in boxes:
@@ -29,7 +77,10 @@ def detect_humans(color_image):
         # display a circle at the center of detected person
         cv2.circle(color_image, ((xB+xA)//2, (yB+yA)//2), 5, (255,0,0),1)
     
-    return humans, color_image
+    for (x, y, w, h) in objects:
+        cv2.rectangle(color_image, (x, y), (x+w, y+h), (0, 255, 0), 3)
+
+    return color_image
 
 """
 `calculate_distances`
@@ -37,6 +88,8 @@ input: humans array, depth frame from the camera.
 output: array of calculated of distances.
 """
 def calculate_distances(humans, depth_frame):
+
+
     distances = []
     leastDist = 99999
     closestCoord = []
@@ -66,18 +119,19 @@ def calculate_distances(humans, depth_frame):
         # distances.append(dist)
     return leastDist, closestCoord #distances
 
+
 def main():
     # Configure depth and color streams
     pipeline = rs.pipeline()
     config = rs.config()
     config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
     config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
-    
+    first_frame = None
+
     try: 
         # Start streaming
         pipeline.start(config)
         while True:
-
             # Wait for a coherent pair of frames: depth and color
             frames = pipeline.wait_for_frames()
             depth_frame = frames.get_depth_frame()
@@ -89,8 +143,19 @@ def main():
             depth_image = np.asanyarray(depth_frame.get_data())
             color_image = np.asanyarray(color_frame.get_data())
 
-            # Deteect humans and draw rectangles around them
-            humans, color_image = detect_humans(color_image)
+            # Detect humans and draw rectangles around them
+            humans = detect_humans(color_image)
+
+            # Define the first frame if it's not defined
+            # Otherwise detect moving objects
+            objects = []
+            if first_frame is None:
+                first_frame = gaussian_blur(color_image)
+            else:
+                objects = detect_moving_objects(first_frame, color_image)
+
+            # Draw detected humans AND objects on color_image
+            color_image = draw_rectangles(color_image, humans, objects)
 
             # Apply colormap on depth image (image must be converted to 8-bit per pixel first)
             depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depth_image, alpha=0.03), cv2.COLORMAP_JET)
