@@ -100,9 +100,9 @@ def calculate_distances(humans, depth_frame):
                 x = human[0] + i
                 y = human[1] - j
                 #to get dist need the x and y to map to a unit of measurement (pixel numbers now)
-                depth =  depth_frame.get_distance(x, y) #returns depth of pixel (x,y) in meters 
-                rs.rs2_deproject_pixel_to_point(to_point,[x,y],depth)
-                dist = distCalc.distance_calc(to_point[0],to_point[1],depth)
+                dist =  depth_frame.get_distance(x, y) #returns depth of pixel (x,y) in meters 
+                #rs.rs2_deproject_pixel_to_point(to_point,[x,y],depth)
+                #dist = distCalc.distance_calc(to_point[0],to_point[1],depth)
                 distances.append(dist)
 
                 #check if distance is too close, 0.6096 meters = 2'
@@ -172,7 +172,9 @@ def main():
 
             # Show images
             dist, coord = calculate_distances(humans, depth_frame)
+            dist1,coord1 = calculate_distances(objects, depth_frame)
             print("Human is " + str(dist) + " away\n")
+            print("Object is " + str(dist) + " away\n")
             
             cv2.namedWindow('RealSense', cv2.WINDOW_AUTOSIZE)
             cv2.imshow('RealSense', images)
