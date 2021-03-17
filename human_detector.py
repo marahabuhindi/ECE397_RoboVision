@@ -2,6 +2,7 @@ import pyrealsense2 as rs
 import numpy as np
 import cv2
 import distCalc
+import pdb
 """
 `guassian_blur`
 input: color image from the camera.
@@ -94,9 +95,11 @@ def calculate_distances(humans, depth_frame):
     leastDist = 99999
     closestCoord = []
     to_point = []*3
+    #breakpoint()
     for human in humans:
-        for i in human[2]:
-            for j in human[3]: #human[0:1] is coordinate of top left corner of the indicator box.
+        for i in range(human[2]-1):
+            for j in range(human[3]-1): #human[0:1] is coordinate of top left corner of the indicator box.
+                print(human)
                 x = human[0] + i
                 y = human[1] - j
                 #to get dist need the x and y to map to a unit of measurement (pixel numbers now)
@@ -111,7 +114,7 @@ def calculate_distances(humans, depth_frame):
                     return -99999, closestCoord
                 if dist < leastDist:
                     leastDist = dist
-                    closestCoord.append(x,y,dist)
+                    closestCoord.append([x,y,dist])
 
         # x = human[0]
         # y = human[1]

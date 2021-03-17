@@ -95,14 +95,36 @@ output: array of calculated of distances.
 """
 def calculate_distances(humans, depth_frame):
 
-
     distances = []
+    leastDist = 99999
+    closestCoord = []
+    to_point = []*3
+    #breakpoint()
     for human in humans:
-        x = human[0]
-        y = human[1]
-        dist = depth_frame.get_distance(x, y)
-        distances.append(dist)
-    return distances
+        for i in range(human[2]-1):
+            for j in range(human[3]-1): #human[0:1] is coordinate of top left corner of the indicator box.
+                x = human[0] + i
+                y = human[1] + j
+                #to get dist need the x and y to map to a unit of measurement (pixel numbers now)
+                dist =  depth_frame.get_distance(x, y) #returns depth of pixel (x,y) in meters 
+                #rs.rs2_deproject_pixel_to_point(to_point,[x,y],depth)
+                #dist = distCalc.distance_calc(to_point[0],to_point[1],depth)
+                distances.append(dist)
+
+                #check if distance is too close, 0.6096 meters = 2'
+                if dist <  0.6096:
+                    print("DANGER " + str(dist) +" " +str(x)+""+str(y))
+                    print(human)
+                    return -99999, closestCoord
+                if dist < leastDist:
+                    leastDist = dist
+                    closestCoord.append([x,y,dist])
+
+        # x = human[0]
+        # y = human[1]
+        # dist = depth_frame.get_distance(x, y)
+        # distances.append(dist)
+    return leastDist, closestCoord #distances
 
 
 def main():
@@ -157,6 +179,10 @@ def main():
             else:
                 images = np.hstack((color_image, depth_colormap))
 
+            dist, coord = calculate_distances(humans, depth_frame)
+            dist1,coord1 = calculate_distances(objects, depth_frame)
+            print("Human is " + str(dist) + " away\n")
+            print("Object is " + str(dist) + " away\n")
             # Show images
             cv2.namedWindow('RealSense', cv2.WINDOW_AUTOSIZE)
             cv2.imshow('RealSense', images)
