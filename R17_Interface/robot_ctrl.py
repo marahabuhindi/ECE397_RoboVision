@@ -5,7 +5,7 @@ import st, serial, os, subprocess,signal, threading, logging, multiprocessing, p
 #     print('Received:', signum)
 #     robot.abort()
 
-def kill_signal(stdin, robot):
+def kill_signal(stdin, robot, lock):
     print("thread working")
     sys.stdin = stdin
     while True:
@@ -18,7 +18,9 @@ def kill_signal(stdin, robot):
         userIn = input("Press enter to abort.")
         if userIn == "":
             logging.info("abort detected")
+            lock.acquire()
             robot.abort()
+            lock.release()
             #os.kill(os.getpid(), signal.SIGUSR1)
             break
 
@@ -47,12 +49,13 @@ def main():
     format = "%(asctime)s: %(message)s"
     logging.basicConfig(format=format, level=logging.INFO,
                         datefmt="%H:%M:%g")
+    lock = threading.Lock()
 
     robot = st.StArm('/dev/ttyS13')
 
-    x = threading.Thread(target=kill_signal, args=(sys.stdin,robot,))
+    x = threading.Thread(target=kill_signal, args=(sys.stdin,robot,lock,), daemon=True)
     x.start()
-    print("x process should have completed")
+
     robot_cmd(robot)
 
 if __name__ == "__main__":
