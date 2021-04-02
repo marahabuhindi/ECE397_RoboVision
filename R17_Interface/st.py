@@ -1,6 +1,8 @@
 import serial as s
 import shlex
 import time
+import subprocess
+import os
 
 # Use this one for Mac/Linux
 DEFAULT_DEV = '/dev/tty.KeySerial1'
@@ -222,18 +224,18 @@ In [36]:
         self.block_on_result(cmd)
 
     def move_to(self, pos, block=True):
-        cmd = str(pos[0]) + ' ' + str(pos[1]) + ' ' + str(pos[2]) + ' MOVETO'
+        cmd = str(pos[0]) + ' ' + str(pos[1]) + ' ' + str(pos[2]) + ' MOVETO' + CR
         self.cxn.flushInput()
-        self.cxn.write(cmd + CR)
+        self.cxn.write(cmd.encode())
         if block:
-            self.block_on_result(cmd)
+            self.block_on_result()
             self.where()
 
     def move(self, del_pos):
-        cmd = str(del_pos[0]) + ' ' + str(del_pos[1]) + ' ' + str(del_pos[2]) + ' MOVE'
+        cmd = str(del_pos[0]) + ' ' + str(del_pos[1]) + ' ' + str(del_pos[2]) + ' MOVE' + CR
         self.cxn.flushInput()
-        self.cxn.write(cmd + CR)
-        self.block_on_result(cmd)
+        self.cxn.write(cmd.encode())
+        self.block_on_result()
         self.where()
 
     def rotate_wrist(self, roll):

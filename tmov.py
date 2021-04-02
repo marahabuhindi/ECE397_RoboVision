@@ -100,6 +100,8 @@ def calculate_distances(humans, depth_frame, log):
     distances = []
     leastDist = 99999
     closestCoord = []
+    distance_sum = 0
+    avg_dist = 99999
     to_point = []*3
     #breakpoint()
     for human in humans:
@@ -109,20 +111,22 @@ def calculate_distances(humans, depth_frame, log):
                 y = human[1] + j
                 #to get dist need the x and y to map to a unit of measurement (pixel numbers now)
                 dist =  depth_frame.get_distance(x, y) #returns depth of pixel (x,y) in meters 
+                distance_sum += dist
                 #rs.rs2_deproject_pixel_to_point(to_point,[x,y],depth)
                 #dist = distCalc.distance_calc(to_point[0],to_point[1],depth)
                 distances.append(dist)
-                
+                if len(distances) >= 1:
+                    avg_dist = distance_sum/len(distances)
                 #check if distance is too close, 0.6096 meters = 2'
-                if dist <  0.6096:
-                    print("DANGER " + str(dist) +" " +str(x)+""+str(y))
-                    print(human)
-                    log.write("DANGER " + str(dist) +" " +str(x)+","+str(y))
-                    log.write(str(human[0]) + " ," + str(human[1]) + " ," + str(human[2]) + " ," + str(human[3]))
-                    return -99999, closestCoord
-                if dist < leastDist:
+                if avg_dist < leastDist:
                     leastDist = dist
-                    closestCoord.append([x,y,dist])
+                    #closestCoord.append([x,y,dist])
+        if avg_dist <  0.6096:
+            print("DANGER " + str(dist) +" " +str(x)+""+str(y))
+            print(human)
+            log.write("DANGER " + str(dist) +" " +str(x)+","+str(y))
+            log.write(str(human[0]) + " ," + str(human[1]) + " ," + str(human[2]) + " ," + str(human[3]))
+            return -99999
 
         # x = human[0]
         # y = human[1]
@@ -195,12 +199,12 @@ def main():
             log = open(filename,"a")
             log.write("\n")
             
-            dist, coord = calculate_distances(humans, depth_frame,log)
-            dist1,coord1 = calculate_distances(objects, depth_frame,log)
+            dist  = calculate_distances(humans, depth_frame,log)
+            dist1 = calculate_distances(objects, depth_frame,log)
             print("Human is " + str(dist) + " away\n")
-            print("Object is " + str(dist) + " away\n")
+            print("Object is " + str(dist1) + " away\n")
             log.write("Human is " + str(dist) + " away\n")
-            log.write("Object is " + str(dist) + " away\n")
+            log.write("Object is " + str(dist1) + " away\n")
 
             log.close()
 
