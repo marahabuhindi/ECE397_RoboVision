@@ -13,8 +13,9 @@ try:
         depth = frames.get_depth_frame()
         if not depth: continue
         #might need break
-        dist = depth.get_distance(300,250)
-        print(dist)
+        dist = depth.get_distance(291,293)
+        dist_feet = dist*3.28084
+        print(dist_feet)
 
     exit(0)
 

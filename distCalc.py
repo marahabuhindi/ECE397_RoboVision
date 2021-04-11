@@ -1,7 +1,7 @@
 import math
 
 def distance_calc(x, y, z):
-    sqSum=x**2+y**2+z**2
+    sqSum=x*x+y*y+z*z
     distance= math.sqrt(sqSum)
     return distance
 
