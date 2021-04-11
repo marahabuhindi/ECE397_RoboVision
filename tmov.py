@@ -1,5 +1,6 @@
 import pyrealsense2 as rs
 import numpy as np
+import socket
 import cv2
 import sys
 import time
@@ -212,10 +213,20 @@ def main():
     config.enable_stream(rs.stream.color, 848, 480, rs.format.bgr8, 30)
     first_frame = None
     # Current Day
+    
+    import socket, sys
+
+    HOST = '127.0.0.1'
+    PORT = 65432
+
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    address = ((HOST, PORT))
+    #message = b'Hello There!'
+    
     Day = time.strftime("%m-%d-%Y", time.localtime())
     # Current Time
     Time = time.strftime("%I:%M:%S %p", time.localtime())
-    filename = str(Day) + str(Time) + ".log"
+    filename = "logs/" + str(Day) + str(Time) + ".log"
 
     try: 
         # Start streaming
@@ -274,13 +285,18 @@ def main():
             dist1 = calculate_distances(objects, depth_frame,log)
             if dist1 == -99999:
                 red=1
+                message = b'abort'
             else:
                 red=0
+                message = b'OK'
             #print("Human is " + str(dist) + " away\n")
             print("Object is " + str(dist1) + " away\n")
             #log.write("Human is " + str(dist) + " away\n")
             log.write("Object is " + str(dist1) + " away\n")
             
+            
+            sent = s.sendto(message, address)
+
             x = threading.Thread(target=lcd_display,args = (lcd,str(dist1),red,), daemon=True)
             x.start()
 
@@ -293,6 +309,7 @@ def main():
     finally:
         # Stop streaming
         pipeline.stop()
+        s.close
 
 if __name__ == "__main__":
     main()
