@@ -51,7 +51,7 @@ def main():
                         datefmt="%H:%M:%g")
     lock = threading.Lock()
 
-    robot = st.StArm('/dev/ttyS13')
+    robot = st.StArm('/dev/ttyUSB0')
 
     x = threading.Thread(target=kill_signal, args=(sys.stdin,robot,lock,), daemon=True)
     x.start()

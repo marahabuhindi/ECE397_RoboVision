@@ -3,6 +3,7 @@ import numpy as np
 import cv2
 import distCalc
 import pdb
+import time
 """
 `guassian_blur`
 input: color image from the camera.
@@ -88,33 +89,38 @@ def draw_rectangles(color_image, humans, objects):
 input: humans array, depth frame from the camera.
 output: array of calculated of distances.
 """
-def calculate_distances(humans, depth_frame):
-
+def calculate_distances(humans, depth_frame, log):
 
     distances = []
     leastDist = 99999
     closestCoord = []
+    distance_sum = 0
+    avg_dist = 99999
     to_point = []*3
     #breakpoint()
     for human in humans:
-        for i in range(human[2]-1):
-            for j in range(human[3]-1): #human[0:1] is coordinate of top left corner of the indicator box.
-                print(human)
+        for i in range(human[2]):
+            for j in range(human[3]): #human[0:1] is coordinate of top left corner of the indicator box.
                 x = human[0] + i
-                y = human[1] - j
+                y = human[1] + j
                 #to get dist need the x and y to map to a unit of measurement (pixel numbers now)
                 dist =  depth_frame.get_distance(x, y) #returns depth of pixel (x,y) in meters 
+                distance_sum += dist
                 #rs.rs2_deproject_pixel_to_point(to_point,[x,y],depth)
                 #dist = distCalc.distance_calc(to_point[0],to_point[1],depth)
                 distances.append(dist)
-
+                if len(distances) >= 1:
+                    avg_dist = distance_sum/len(distances)
                 #check if distance is too close, 0.6096 meters = 2'
-                if dist <  0.6096:
-                    print("DANGER") 
-                    return -99999, closestCoord
-                if dist < leastDist:
+                if avg_dist < leastDist:
                     leastDist = dist
-                    closestCoord.append([x,y,dist])
+                    #closestCoord.append([x,y,dist])
+        if avg_dist <  0.6096:
+            print("DANGER " + str(dist) +" " +str(x)+""+str(y))
+            print(human)
+            log.write("DANGER " + str(dist) +" " +str(x)+","+str(y))
+            log.write(str(human[0]) + " ," + str(human[1]) + " ," + str(human[2]) + " ," + str(human[3]))
+            return -99999
 
         # x = human[0]
         # y = human[1]
@@ -130,6 +136,11 @@ def main():
     config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
     config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
     first_frame = None
+     # Current Day
+    Day = time.strftime("%m-%d-%Y", time.localtime())
+    # Current Time
+    Time = time.strftime("%I:%M:%S %p", time.localtime())
+    filename = str(Day) + str(Time) + ".log"
 
     try: 
         # Start streaming
@@ -174,14 +185,22 @@ def main():
                 images = np.hstack((color_image, depth_colormap))
 
             # Show images
-            dist, coord = calculate_distances(humans, depth_frame)
-            dist1,coord1 = calculate_distances(objects, depth_frame)
-            print("Human is " + str(dist) + " away\n")
-            print("Object is " + str(dist) + " away\n")
+
             
             cv2.namedWindow('RealSense', cv2.WINDOW_AUTOSIZE)
             cv2.imshow('RealSense', images)
             cv2.waitKey(1)
+            log = open(filename,"a")
+            log.write("\n")
+            
+            dist  = calculate_distances(humans, depth_frame,log)
+            dist1 = calculate_distances(objects, depth_frame,log)
+            print("Human is " + str(dist) + " away\n")
+            print("Object is " + str(dist1) + " away\n")
+            log.write("Human is " + str(dist) + " away\n")
+            log.write("Object is " + str(dist1) + " away\n")
+
+            log.close() 
 
     except Exception as e:
         print(e)
