@@ -150,6 +150,7 @@ def calculate_distances(humans, depth_frame, log):
     distances = []
     dist = 99999
     closestCoord = []
+    closest_dist = 99999
     distance_sum = 0
     avg_dist = 99999
     to_point = []*3
@@ -178,14 +179,16 @@ def calculate_distances(humans, depth_frame, log):
         if dist <  1.5:#0.6096:
             print("DANGER " + str(dist) +" " +str(x)+""+str(y))
             log.write("DANGER " + str(dist) +" " +str(x)+","+str(y))
-            log.write(str(x) + " ," + str(y) + " ," + str(w) + " ," + str(h))
+            log.write(str(x) + " ," + str(y) + " ," + str(w) + " ," + str(h) + "\n")
             return -99999
+        if dist < closest_dist:
+            closest_dist = dist
 
     # x = human[0]dist1
     # y = human[1]
     # dist = depth_frame.get_distance(x, y)
     # distances.append(dist)
-    return dist #distances
+    return closest_dist #distances
 
 def lcd_display(lcd, mesg,red):
     
@@ -204,6 +207,33 @@ def lcd_display(lcd, mesg,red):
     time.sleep(3)
     GPIO.output(4,GPIO.LOW)    
     GPIO.output(17,GPIO.LOW)
+
+"""
+This program defines different safe zones
+It takes as an input distance,
+it returns the Safe Zone number
+"""
+def safezone(distance, log):
+    #total of 3 defined zones
+    #danger, caution, and safe
+    #stop, reduced speed, normal speed
+    szone = 0
+    if (distance < 1.5):
+        #Safe zone #1 - DANGER! Stop Robot
+        szone = 1
+        print("Safe Zone #1. DANGER! Stop the Robot!")
+        log.write("Safe Zone #1. DANGER! Stop the Robot!")
+    if (distance >= 1.5 and distance < 4):
+        #Safe zone #2
+        szone = 2
+        print("Safe Zone #2. Reduced Speed.")
+        log.write("Safe Zone #2. Reduced Speed.")
+    if (distance >= 4):
+        #Safe zone #3
+        szone = 3
+        print("Safe Zone #3. Normal Speed.")
+        log.write("Safe Zone #3. Normal Speed.")
+        return szone
 
 def main():
     # Configure depth and color streams
@@ -279,26 +309,32 @@ def main():
             cv2.waitKey(1)
             
             log = open(filename,"a")
-            log.write("\n")
             
-            #dist  = calculate_distances(humans, depth_frame,log)
-            dist1 = calculate_distances(objects, depth_frame,log)
-            if dist1 == -99999:
-                red=1
-                message = b'abort'
-            else:
-                red=0
-                message = b'OK'
-            #print("Human is " + str(dist) + " away\n")
-            print("Object is " + str(dist1) + " away\n")
-            #log.write("Human is " + str(dist) + " away\n")
-            log.write("Object is " + str(dist1) + " away\n")
-            
-            
-            sent = s.sendto(message, address)
+            if len(objects)!=0:
+                log.write("\n")
+                #dist  = calculate_distances(humans, depth_frame,log)
+                dist1 = calculate_distances(objects, depth_frame,log)
+                if dist1 == -99999:
+                    red=1
+                    message = b'abort'
+                else:
+                    red=0
+                    message = b'OK'
+                safezone(dist1, log) #Assess safe zone and print on screen
+                if dist1 == 99999:
+                    print("No Human detected.")
+                    log.write("No Human detected.")
+                else:  
+                    #print("Human is " + str(dist) + " away\n")
+                    print("Object is " + str(dist1) + " m away\n")
+                    #log.write("Human is " + str(dist) + " away\n")
+                    log.write("Object is " + str(dist1) + " m away\n")
+                
+                
+                sent = s.sendto(message, address)
 
-            x = threading.Thread(target=lcd_display,args = (lcd,str(dist1),red,), daemon=True)
-            x.start()
+                x = threading.Thread(target=lcd_display,args = (lcd,str(dist1),red,), daemon=True)
+                x.start()
 
             log.close()
 
