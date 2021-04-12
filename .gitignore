@@ -1,4 +1,5 @@
 *.so*
 *.log
 labtestin.py
+*pycache*
 .vscode/
