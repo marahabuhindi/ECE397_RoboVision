@@ -1,5 +1,5 @@
 import st, serial, os, subprocess,signal, threading, logging, multiprocessing, pdb, sys, socket
-
+import time
 
 # def receive_signal(signum, stack, robot):
 #     print('Received:', signum)
@@ -7,8 +7,8 @@ import st, serial, os, subprocess,signal, threading, logging, multiprocessing, p
 
 def kill_signal(stdin, robot, lock,sock):
     print("thread working")
-    sys.stdin = stdin
-    while True:
+    #sys.stdin = stdin
+    #while True:
         # p = subprocess.Popen([sys.executable, "alarm_trigger.py"],
         #         #stdin=subprocess.PIPE,
         #         stdout=subprocess.PIPE)
@@ -16,17 +16,21 @@ def kill_signal(stdin, robot, lock,sock):
         # trigger = out.decode()
         # logging.info(out.decode())
         #userIn = input("Press enter to abort.")
-        while True:
-            data,address = s.recvfrom(4096)
-            str_data = data.decode()
-            print(str_data)
-                if "abort" in str_data:
-                    logging.info("abort detected")
-                    lock.acquire()
-                    robot.abort()
-                    lock.release()
-                    #os.kill(os.getpid(), signal.SIGUSR1)
-                    break
+    while True:
+        data,address = sock.recvfrom(4096)
+        str_data = data.decode()
+        print(str_data)
+        if "abort" in str_data:
+            logging.info("abort detected")
+            try:
+                lock.acquire()
+                robot.abort()
+                lock.release()
+            finally:
+                robot.close_com()
+                break
+            #os.kill(os.getpid(), signal.SIGUSR1)
+            break
 
     # signal.signal(signal.SIGUSR1, receive_signal)
     # os.getpid()
@@ -38,15 +42,21 @@ def kill_signal(stdin, robot, lock,sock):
 
 def robot_cmd(robot):
     P1 = ['0','3500','0']
-    P2 = ['0','1000','']
-
-    robot.roboforth()
-    robot.start()
-    robot.cartesian()
-    robot.move_to(P1)
-    #robot.move(P2)
-    robot.home()
-    robot.where()
+    P2 = ['3000','3500','0']
+    try:
+        robot.roboforth()
+        robot.start()
+        robot.cartesian()
+        for x in range(5):
+            robot.move_to(P1)
+            time.sleep(1)
+            robot.move_to(P2)
+            time.sleep(1)
+        robot.home()
+        robot.where()
+    except Exception as e:
+        if "not open" in str(e):
+            print("Object too close.")
     # robot.abort()
 
 def main():
@@ -62,12 +72,11 @@ def main():
 
     robot = st.StArm('/dev/ttyUSB0')
 
-    x = threading.Thread(target=kill_signal, args=(sys.stdin,robot,lock,a,), daemon=True)
+    x = threading.Thread(target=kill_signal, args=(sys.stdin,robot,lock,s,), daemon=True)
     x.start()
-    
-    s.close()
 
     robot_cmd(robot)
+    s.close()
 
 if __name__ == "__main__":
     main()

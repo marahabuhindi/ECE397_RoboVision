@@ -100,6 +100,11 @@ In [36]:
             self.abort()
 
         self.tool_length = 0
+    
+    def close_com(self):
+        print("Connection Terminated")
+        self.cxn.flushInput()
+        self.cxn.close()
 
     def set_tool_length(self, length):
         self.tool_length = length
