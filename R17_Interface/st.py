@@ -105,6 +105,10 @@ In [36]:
         print("Connection Terminated")
         self.cxn.flushInput()
         self.cxn.close()
+    
+    def flush(self):
+        self.cxn.flushInput()
+        self.cxn.flushOutput()
 
     def set_tool_length(self, length):
         self.tool_length = length
@@ -212,6 +216,7 @@ In [36]:
         self.cxn.flushInput()
         self.cxn.write(cmd.encode())
         self.block_on_result()
+        self.cxn.flushOutput()
 
     def get_accel(self):
         cmd = ACCEL + QUERY

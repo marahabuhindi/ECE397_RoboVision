@@ -16,7 +16,7 @@ def kill_signal(stdin, robot, lock,sock):
         if "abort" in str_data:
             logging.info("abort detected")
             start = current_milli_time()
-            logging.info("start time = %d", % start)
+            logging.info("start time = %s" % start)
             try:
                 lock.acquire()
                 robot.abort()
@@ -24,18 +24,18 @@ def kill_signal(stdin, robot, lock,sock):
             finally:
                 robot.close_com()
                 endT = current_milli_time()
-                logging.info("end time = %d, totoal time = %d", % endT, % (endT-start))
+                logging.info("end time = %d, total time = %s" % (endT, (endT-start)))
                 break
-            #os.kill(os.getpid(), signal.SIGUSR1)
             break
-
-    # signal.signal(signal.SIGUSR1, receive_signal)
-    # os.getpid()
-# def play():
-#     i = 1
-#     while True:
-#         logging.info("Thread successfully running! x%d", i)
-#         i+=1
+        if "speed" in str_data:
+            logging.info("Reducing speed...")
+            lock.acquire()
+            try:
+                robot.set_speed(5000) #set speed to half of default speed
+            finally:
+                robot.flush()
+                lock.release()
+                break
 
 def robot_cmd(robot):
     P1 = ['0','3500','0']

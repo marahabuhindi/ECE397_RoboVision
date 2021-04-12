@@ -223,17 +223,20 @@ def safezone(distance, log):
         szone = 1
         print("Safe Zone #1. DANGER! Stop the Robot!")
         log.write("Safe Zone #1. DANGER! Stop the Robot!")
-    if (distance >= 1.5 and distance < 4):
+        message = b'abort'
+    elif (distance >= 1.5 and distance < 4):
         #Safe zone #2
         szone = 2
         print("Safe Zone #2. Reduced Speed.")
         log.write("Safe Zone #2. Reduced Speed.")
-    if (distance >= 4):
+        message = b'reduce speed'
+    elif (distance >= 4):
         #Safe zone #3
         szone = 3
         print("Safe Zone #3. Normal Speed.")
         log.write("Safe Zone #3. Normal Speed.")
-        return szone
+        message = b'OK'
+    return szone, message
 
 def main():
     # Configure depth and color streams
@@ -316,25 +319,25 @@ def main():
                 dist1 = calculate_distances(objects, depth_frame,log)
                 if dist1 == -99999:
                     red=1
-                    message = b'abort'
                 else:
                     red=0
-                    message = b'OK'
-                safezone(dist1, log) #Assess safe zone and print on screen
+                zone, message = safezone(dist1, log) #Assess safe zone and print on screen
                 if dist1 == 99999:
-                    print("No Human detected.")
-                    log.write("No Human detected.")
-                else:  
-                    #print("Human is " + str(dist) + " away\n")
-                    print("Object is " + str(dist1) + " m away\n")
-                    #log.write("Human is " + str(dist) + " away\n")
-                    log.write("Object is " + str(dist1) + " m away\n")
+                    print("Object out of measurement range.")
+                    log.write("Object out of measurement range.")
+                    
+            else:  
+#                 print("No Human detected.")
+#                 log.write("No Human detected.")
+                dist1 = 99999
+                red = 0
+                message = b'Nothing Detected'
                 
                 
-                sent = s.sendto(message, address)
+            sent = s.sendto(message, address)
 
-                x = threading.Thread(target=lcd_display,args = (lcd,str(dist1),red,), daemon=True)
-                x.start()
+            x = threading.Thread(target=lcd_display,args = (lcd,str(dist1),red,), daemon=True)
+            x.start()
 
             log.close()
 
