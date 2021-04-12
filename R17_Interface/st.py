@@ -204,15 +204,14 @@ In [36]:
     def get_speed(self):
         cmd = SPEED + QUERY
         self.cxn.flushInput()
-        self.cxn.write(cmd + CR)
-        result = self.block_on_result(cmd)
-        return int(result.split(' ')[-2])
+        self.cxn.write(cmd.encode())
+        self.block_on_result()
 
     def set_speed(self, speed):
-        cmd = str(speed) + ' ' + SPEED + IMPERATIVE
+        cmd = str(speed) + ' ' + SPEED + IMPERATIVE + CR
         self.cxn.flushInput()
-        self.cxn.write(cmd + CR)
-        self.block_on_result(cmd)
+        self.cxn.write(cmd.encode())
+        self.block_on_result()
 
     def get_accel(self):
         cmd = ACCEL + QUERY

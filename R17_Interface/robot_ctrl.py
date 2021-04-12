@@ -1,33 +1,30 @@
 import st, serial, os, subprocess,signal, threading, logging, multiprocessing, pdb, sys, socket
 import time
+import datetime
 
 # def receive_signal(signum, stack, robot):
 #     print('Received:', signum)
 #     robot.abort()
+def current_milli_time():
+    return round(time.time() * 1000)
 
 def kill_signal(stdin, robot, lock,sock):
-    print("thread working")
-    #sys.stdin = stdin
-    #while True:
-        # p = subprocess.Popen([sys.executable, "alarm_trigger.py"],
-        #         #stdin=subprocess.PIPE,
-        #         stdout=subprocess.PIPE)
-        # out, _ = p.communicate(s.encode())
-        # trigger = out.decode()
-        # logging.info(out.decode())
-        #userIn = input("Press enter to abort.")
     while True:
         data,address = sock.recvfrom(4096)
         str_data = data.decode()
         print(str_data)
         if "abort" in str_data:
             logging.info("abort detected")
+            start = current_milli_time()
+            logging.info("start time = %d", % start)
             try:
                 lock.acquire()
                 robot.abort()
                 lock.release()
             finally:
                 robot.close_com()
+                endT = current_milli_time()
+                logging.info("end time = %d, totoal time = %d", % endT, % (endT-start))
                 break
             #os.kill(os.getpid(), signal.SIGUSR1)
             break
