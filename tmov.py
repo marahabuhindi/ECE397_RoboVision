@@ -175,10 +175,16 @@ def calculate_distances(humans, depth_frame, log):
     for (x, y, w, h) in humans:
         x = (x+w)//2
         y = (y+h)//2
-        dist = depth_frame.get_distance(x, y)
-        if dist <  1.5:#0.6096:
-            print("DANGER " + str(dist) +" " +str(x)+""+str(y))
-            log.write("DANGER " + str(dist) +" " +str(x)+","+str(y))
+#         dist = depth_frame.get_distance(x, y)
+#         if dist == 0:
+        dist1 = depth_frame.get_distance(x+2,y-2)
+        dist2 = depth_frame.get_distance(x-2,y+2)
+        dist3 = depth_frame.get_distance(x-2,y-2)
+        dist4 = depth_frame.get_distance(x+2,y+2)
+        dist = (dist1+dist2+dist3+dist4)/4
+        if dist <  1.6:#0.6096:
+            print("DANGER " + str(dist) +" m " +str(x)+","+str(y))
+            log.write("DANGER " + str(dist) +" m " +str(x)+","+str(y))
             log.write(str(x) + " ," + str(y) + " ," + str(w) + " ," + str(h) + "\n")
             return -99999
         if dist < closest_dist:
@@ -207,6 +213,7 @@ def lcd_display(lcd, mesg,red):
     time.sleep(3)
     GPIO.output(4,GPIO.LOW)    
     GPIO.output(17,GPIO.LOW)
+    time.sleep(2)
 
 """
 This program defines different safe zones
@@ -218,23 +225,23 @@ def safezone(distance, log):
     #danger, caution, and safe
     #stop, reduced speed, normal speed
     szone = 0
-    if (distance < 1.5):
+    if (distance < 1.6):
         #Safe zone #1 - DANGER! Stop Robot
         szone = 1
         print("Safe Zone #1. DANGER! Stop the Robot!")
         log.write("Safe Zone #1. DANGER! Stop the Robot!")
         message = b'abort'
-    elif (distance >= 1.5 and distance < 4):
+    elif (distance >= 1.6 and distance < 4):
         #Safe zone #2
         szone = 2
-        print("Safe Zone #2. Reduced Speed.")
+        print("Safe Zone #2, " +str(distance)+ " m away. Reduced Speed.")
         log.write("Safe Zone #2. Reduced Speed.")
         message = b'reduce speed'
     elif (distance >= 4):
         #Safe zone #3
         szone = 3
         print("Safe Zone #3. Normal Speed.")
-        log.write("Safe Zone #3. Normal Speed.")
+        log.write("Safe Zone #3, " +str(distance)+ " m away. Normal Speed.")
         message = b'OK'
     return szone, message
 

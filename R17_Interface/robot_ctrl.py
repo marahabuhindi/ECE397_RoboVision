@@ -1,7 +1,7 @@
 import st, serial, os, subprocess,signal, threading, logging, multiprocessing, pdb, sys, socket
 import time
 import datetime
-import queue
+from queue import Queue
 
 # def receive_signal(signum, stack, robot):
 #     print('Received:', signum)
@@ -30,8 +30,10 @@ def kill_signal(stdin, robot, lock,sock,q):
             break
         if "speed" in str_data:
             logging.info("Reducing speed...")
+            start_sp = current_milli_time()
+            logging.info("Start time for speed reduction: %s" % start_sp)
             q.put(1)
-            break
+            #break
             # lock.acquire()
             # try:
             #     robot.set_speed(5000) #set speed to half of default speed
@@ -46,13 +48,17 @@ def robot_cmd(robot, q):
         robot.roboforth()
         robot.start()
         robot.cartesian()
-        for x in range(5):
+        for x in range(10):
             if not q.empty():
                 robot.set_speed(5000) #set speed to half of default speed
+                enT = current_milli_time()
+                logging.info("End time = %s" % enT)
+            else:
+                robot.set_speed(10000)
             robot.move_to(P1)
-            time.sleep(1)
+            #time.sleep(1)
             robot.move_to(P2)
-            time.sleep(1)
+            #time.sleep(1)
         robot.home()
         robot.where()
     except Exception as e:
@@ -64,7 +70,7 @@ def main():
     HOST = '127.0.0.1'
     PORT = 65432
 
-    q = queue()
+    q = Queue()
 
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.bind((HOST, PORT))
