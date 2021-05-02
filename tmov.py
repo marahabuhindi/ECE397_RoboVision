@@ -1,5 +1,6 @@
 import pyrealsense2 as rs
 import numpy as np
+import socket
 import cv2
 import sys
 import time
@@ -149,6 +150,7 @@ def calculate_distances(humans, depth_frame, log):
     distances = []
     dist = 99999
     closestCoord = []
+    closest_dist = 99999
     distance_sum = 0
     avg_dist = 99999
     to_point = []*3
@@ -173,18 +175,26 @@ def calculate_distances(humans, depth_frame, log):
     for (x, y, w, h) in humans:
         x = (x+w)//2
         y = (y+h)//2
-        dist = depth_frame.get_distance(x, y)
-        if dist <  1.5:#0.6096:
-            print("DANGER " + str(dist) +" " +str(x)+""+str(y))
-            log.write("DANGER " + str(dist) +" " +str(x)+","+str(y))
-            log.write(str(x) + " ," + str(y) + " ," + str(w) + " ," + str(h))
+#         dist = depth_frame.get_distance(x, y)
+#         if dist == 0:
+        dist1 = depth_frame.get_distance(x+2,y-2)
+        dist2 = depth_frame.get_distance(x-2,y+2)
+        dist3 = depth_frame.get_distance(x-2,y-2)
+        dist4 = depth_frame.get_distance(x+2,y+2)
+        dist = (dist1+dist2+dist3+dist4)/4
+        if dist <  1.6:#0.6096:
+            print("DANGER " + str(dist) +" m " +str(x)+","+str(y))
+            log.write("DANGER " + str(dist) +" m " +str(x)+","+str(y))
+            log.write(str(x) + " ," + str(y) + " ," + str(w) + " ," + str(h) + "\n")
             return -99999
+        if dist < closest_dist:
+            closest_dist = dist
 
     # x = human[0]dist1
     # y = human[1]
     # dist = depth_frame.get_distance(x, y)
     # distances.append(dist)
-    return dist #distances
+    return closest_dist #distances
 
 def lcd_display(lcd, mesg,red):
     
@@ -203,6 +213,37 @@ def lcd_display(lcd, mesg,red):
     time.sleep(3)
     GPIO.output(4,GPIO.LOW)    
     GPIO.output(17,GPIO.LOW)
+    time.sleep(2)
+
+"""
+This program defines different safe zones
+It takes as an input distance,
+it returns the Safe Zone number
+"""
+def safezone(distance, log):
+    #total of 3 defined zones
+    #danger, caution, and safe
+    #stop, reduced speed, normal speed
+    szone = 0
+    if (distance < 1.6):
+        #Safe zone #1 - DANGER! Stop Robot
+        szone = 1
+        print("Safe Zone #1. DANGER! Stop the Robot!")
+        log.write("Safe Zone #1. DANGER! Stop the Robot!")
+        message = b'abort'
+    elif (distance >= 1.6 and distance < 4):
+        #Safe zone #2
+        szone = 2
+        print("Safe Zone #2, " +str(distance)+ " m away. Reduced Speed.")
+        log.write("Safe Zone #2. Reduced Speed.")
+        message = b'reduce speed'
+    elif (distance >= 4):
+        #Safe zone #3
+        szone = 3
+        print("Safe Zone #3. Normal Speed.")
+        log.write("Safe Zone #3, " +str(distance)+ " m away. Normal Speed.")
+        message = b'OK'
+    return szone, message
 
 def main():
     # Configure depth and color streams
@@ -212,10 +253,20 @@ def main():
     config.enable_stream(rs.stream.color, 848, 480, rs.format.bgr8, 30)
     first_frame = None
     # Current Day
+    
+    import socket, sys
+
+    HOST = '127.0.0.1'
+    PORT = 65432
+
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    address = ((HOST, PORT))
+    #message = b'Hello There!'
+    
     Day = time.strftime("%m-%d-%Y", time.localtime())
     # Current Time
     Time = time.strftime("%I:%M:%S %p", time.localtime())
-    filename = str(Day) + str(Time) + ".log"
+    filename = "logs/" + str(Day) + str(Time) + ".log"
 
     try: 
         # Start streaming
@@ -268,19 +319,30 @@ def main():
             cv2.waitKey(1)
             
             log = open(filename,"a")
-            log.write("\n")
             
-            #dist  = calculate_distances(humans, depth_frame,log)
-            dist1 = calculate_distances(objects, depth_frame,log)
-            if dist1 == -99999:
-                red=1
-            else:
-                red=0
-            #print("Human is " + str(dist) + " away\n")
-            print("Object is " + str(dist1) + " away\n")
-            #log.write("Human is " + str(dist) + " away\n")
-            log.write("Object is " + str(dist1) + " away\n")
-            
+            if len(objects)!=0:
+                log.write("\n")
+                #dist  = calculate_distances(humans, depth_frame,log)
+                dist1 = calculate_distances(objects, depth_frame,log)
+                if dist1 == -99999:
+                    red=1
+                else:
+                    red=0
+                zone, message = safezone(dist1, log) #Assess safe zone and print on screen
+                if dist1 == 99999:
+                    print("Object out of measurement range.")
+                    log.write("Object out of measurement range.")
+                    
+            else:  
+#                 print("No Human detected.")
+#                 log.write("No Human detected.")
+                dist1 = 99999
+                red = 0
+                message = b'Nothing Detected'
+                
+                
+            sent = s.sendto(message, address)
+
             x = threading.Thread(target=lcd_display,args = (lcd,str(dist1),red,), daemon=True)
             x.start()
 
@@ -293,6 +355,7 @@ def main():
     finally:
         # Stop streaming
         pipeline.stop()
+        s.close
 
 if __name__ == "__main__":
     main()
